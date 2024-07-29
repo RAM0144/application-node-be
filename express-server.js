@@ -11,7 +11,7 @@ import authRouter from "./Routes/auth.js";
 
 const server = express();
 
-// Body Parsing Middleware ->postman api data view on terminal
+// Body Parsing Middleware 
 server.use(express.json());
 
 server.use(cors()); // using the cors middleware to make our apis cors compalint
@@ -33,7 +33,7 @@ await connectToDB();
 
 
 server.use("/students", studentDbRouter);
-server.use("/auth", authRouter)
+server.use("/auth", authRouter);
 
 const port = 5900;
 

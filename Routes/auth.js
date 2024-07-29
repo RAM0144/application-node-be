@@ -3,6 +3,7 @@ import bcrypt  from "bcrypt";
 import jwt from "jsonwebtoken";
 import { userModel } from "../DB-utils/models.js";
 import { db } from "../DB-utils/mongodb.connection.js";
+import { mailOption, transporter } from "../mail-utils/mail.js";
 
 const authRouter = express.Router();
 
@@ -24,6 +25,11 @@ authRouter.post("/register", async (req, res) => {
                 const user = new userModel(tempData);
 
                 await user.save(); // validate the schema and insert the record into the db
+                
+                await transporter.sendMail({
+                    ...mailOption,
+                    to: [userDetails.email],
+                })
 
                 res.send({ msg: "Registration Successfully!" });
             }
@@ -67,5 +73,38 @@ authRouter.post("/login", async (req, res) => {
         console.log("Error", error);
         res.status(500).send({ msg: "Internal Server Error" });
     }
-})
+});
+
+//forgetPassword
+authRouter.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+  
+    const user =  await db.collection("users").findOne(u => u.email === email);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+  
+    const resetToken = jwt.sign(
+        {email: user.email},
+        process.env.JWT_SECRET,
+
+    ); // You should generate a secure token here
+    const resetLink = `${process.env.FE_URL}/reset-password?token=${resetToken}`;
+  
+    const mailOptions = {
+      from: "test016322@gmail.com",
+      to: user.email,
+      subject: 'Password Reset',
+      text: `Hello ${user.name},\n\nPlease click on the following link to reset your password:\n\n${resetLink}\n\nIf you did not request this, please ignore this email.\n\nThank you!`
+    };
+  
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return res.status(500).json({ message: 'Error sending email', error });
+      }
+      res.status(200).json({ message: 'Password reset email sent', info });
+    });
+  });
+  
+
 export default authRouter;
